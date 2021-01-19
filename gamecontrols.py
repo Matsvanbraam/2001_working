@@ -8,12 +8,18 @@ from playingfield import PlayingField
 class GameControls:
 
     def __init__(self, row, col, piece):
+
         self.game_over = False
         self.PLAYER = 0
         self.AI = 1
-        # Randomize turn between Player and AI
-        self.turn = random.randint(self.PLAYER, self.AI)
+        self.PLAYER_PIECE = 1
+        self.AI_PIECE = 2
+        self.EMPTY = 0
+
+        self.turn = 0
+
         self.WIN_TEXT = (255, 255, 255)
+        self.WINDOW_LENGTH = 4
 
         self.playingfield = PlayingField()
         self.board = self.playingfield.board
@@ -45,41 +51,50 @@ class GameControls:
 
                         if self.is_valid_location(self.board, col):
                             row = self.get_next_open_row(self.board, col)
-                            self.drop_piece(self.board, row, col, 1)
+                            self.drop_piece(self.board, row, col, self.PLAYER_PIECE)
 
-                            if self.winning_move(self.board, 1):
+                            if self.winning_move(self.board, self.PLAYER_PIECE):
                                 label = self.font.render("PLAYER WINS!", 1, self.WIN_TEXT)
                                 # Updates that specific part of the screen
                                 self.screen.blit(label, (40, 10))
                                 self.game_over = True
 
+                            self.playingfield.print_board(self.board)
+
                             # Switch turns in case of a valid location by taking remainder of variable turn and see if they are even or uneven
                             self.turn += 1
                             self.turn = self.turn % 2
 
-                            self.playingfield.print_board(self.board)
+                            print(self.turn)
+
 
             if self.turn == self.AI and not self.game_over:
                 # posx = event.pos[0]
                 # col = int(math.floor(posx/self.SQUARESIZE))
-                col = random.randint(0, self.COLUMN_COUNT-1)
+                # col = random.randint(0,self.COLUMN_COUNT-1)
+                col = self.pick_best_move(self.board, self.AI_PIECE)
+                print(self.turn)
 
                 if self.is_valid_location(self.board, col):
                     pygame.time.wait(500)
                     row = self.get_next_open_row(self.board, col)
-                    self.drop_piece(self.board, row, col, 2)
+                    self.drop_piece(self.board, row, col, self.AI_PIECE)
 
-                    if self.winning_move(self.board, 2):
+                    if self.winning_move(self.board, self.AI_PIECE):
                         label = self.font.render("AI WINS!", 2, self.WIN_TEXT)
                         # Updates that specific part of the screen
                         self.screen.blit(label, (40, 10))
                         self.game_over = True
 
+                    self.playingfield.print_board(self.board)
+
                     # Switch turns in case of a valid location by taking remainder of variable turn and see if they are even or uneven
                     self.turn += 1
                     self.turn = self.turn % 2
 
-                    self.playingfield.print_board(self.board)
+                    print(self.turn)
+
+
 
             # Wait for 3 seconds to create delay when winning
             if self.game_over:
@@ -135,3 +150,52 @@ class GameControls:
                 # Check if 4 pieces are next to each other, so win
                 if self.board[r][c] == piece and self.board[r - 1][c + 1] == piece and self.board[r - 2][c + 2] == piece and self.board[r - 3][c + 3] == piece:
                     return True
+
+    def score_position(self, board, piece):
+        score = 0
+        # Score horizontal
+        # In a specific row, check all column positions
+        for r in range(self.ROW_COUNT):
+            row_array = [int(i) for i in list(board[r,:])]
+            for c in range(self.COLUMN_COUNT-3):
+                window = row_array[c:c+self.WINDOW_LENGTH]
+                if window.count(piece) == 4:
+                    score += 100
+                elif window.count(piece) == 3 and window.count(self.EMPTY) == 1:
+                    score += 10
+        for c in range(self.COLUMN_COUNT):
+            col_array = [int(i) for i in list(board[:,c])]
+            for r in range(self.ROW_COUNT-3):
+                window = col_array[r:r+self.WINDOW_LENGTH]
+                if window.count(piece) == 4:
+                    score += 100
+                elif window.count(piece) == 3 and window.count(self.EMPTY) == 1:
+                    score += 10
+
+        return score
+
+
+    # Create a list of all columns you can drop a piece in
+    def get_valid_locations(self, board):
+        valid_locations = []
+        for col in range(self.COLUMN_COUNT):
+            if self.is_valid_location(board, col):
+                # Add valid columns to the list
+                valid_locations.append(col)
+        return valid_locations
+
+    def pick_best_move(self, board, piece):
+        valid_locations = self.get_valid_locations(board)
+        best_score = 0
+        best_col = random.choice(valid_locations)
+        for col in valid_locations:
+            row = self.get_next_open_row(board, col)
+            temp_board = board.copy()
+            self.drop_piece(temp_board, row, col, piece)
+            score = self.score_position(temp_board, piece)
+            #If score of lastest column is > best score, set that column to the best column
+            if score > best_score:
+                best_score = score
+                best_col = col
+
+        return best_col
