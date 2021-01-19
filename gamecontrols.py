@@ -9,11 +9,11 @@ class GameControls:
 
     def __init__(self, row, col, piece):
         self.game_over = False
-        self.turn = 0
-        self.WIN_TEXT = (255, 255, 255)
-
         self.PLAYER = 0
         self.AI = 1
+        # Randomize turn between Player and AI
+        self.turn = random.randint(self.PLAYER, self.AI)
+        self.WIN_TEXT = (255, 255, 255)
 
         self.playingfield = PlayingField()
         self.board = self.playingfield.board
@@ -29,7 +29,6 @@ class GameControls:
 
 
     def player_actions(self):
-        # Randomize turn between Player and AI
         self.playingfield.print_board(self.board)
         while not self.game_over:
             # pygame library checks is any input is given
