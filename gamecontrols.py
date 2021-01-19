@@ -1,8 +1,11 @@
+# Project by Mats van Braam and Laura Schep
+
 import random
 import pygame
 import sys
 import math
 from playingfield import PlayingField
+from voicecontrols import VoiceControls
 
 
 class GameControls:
@@ -28,6 +31,8 @@ class GameControls:
         self.SQUARESIZE = self.playingfield.SQUARESIZE
         self.screen = self.playingfield.screen
 
+        self.voicecontrols = VoiceControls()
+
         self.row = row
         self.col = col
         self.piece = piece
@@ -46,8 +51,11 @@ class GameControls:
                 # Check is there is mousebutton down input (AUDIO LATER ADDED)
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if self.turn == self.PLAYER:
-                        posx = event.pos[0]
-                        col = int(math.floor(posx/self.SQUARESIZE))
+                        # Uncomment these two comments, to click in order to place a piece instead of voice
+                        #posx = event.pos[0]
+                        #col = int(math.floor(posx/self.SQUARESIZE))
+                        # Comment this comment, to click in order to place a piece instead of voice
+                        col = self.voicecontrols.listening()
 
                         if self.is_valid_location(self.board, col):
                             row = self.get_next_open_row(self.board, col)
@@ -65,15 +73,16 @@ class GameControls:
                             self.turn += 1
                             self.turn = self.turn % 2
 
-                            print(self.turn)
+                            # print(self.turn)
 
 
             if self.turn == self.AI and not self.game_over:
                 # posx = event.pos[0]
                 # col = int(math.floor(posx/self.SQUARESIZE))
                 # col = random.randint(0,self.COLUMN_COUNT-1)
-                col = self.pick_best_move(self.board, self.AI_PIECE)
-                print(self.turn)
+                col, minimax_score = self.minimax(self.board, 2,True)
+                # print(col)
+                #print(self.turn)
 
                 if self.is_valid_location(self.board, col):
                     pygame.time.wait(500)
@@ -92,9 +101,7 @@ class GameControls:
                     self.turn += 1
                     self.turn = self.turn % 2
 
-                    print(self.turn)
-
-
+                    #print(self.turn)
 
             # Wait for 3 seconds to create delay when winning
             if self.game_over:
@@ -151,29 +158,121 @@ class GameControls:
                 if self.board[r][c] == piece and self.board[r - 1][c + 1] == piece and self.board[r - 2][c + 2] == piece and self.board[r - 3][c + 3] == piece:
                     return True
 
+    def evaluate_window(self, window, piece):
+        score = 0
+
+        # Set correct opponent
+        opp_piece = self.PLAYER_PIECE
+        if piece == self.PLAYER_PIECE:
+            opp_piece = self.AI_PIECE
+
+        # Scores for current player
+        if window.count(piece) == 4:
+            score += 100
+        elif window.count(piece) == 3 and window.count(self.EMPTY) == 1:
+            score += 5
+        elif window.count(piece) == 2 and window.count(self.EMPTY) == 2:
+            score += 2
+
+        # Scores for opponent
+        if window.count(opp_piece) == 3 and window.count(self.EMPTY) == 1:
+            score -= 4
+
+        return score
+
     def score_position(self, board, piece):
         score = 0
+
+        # Score center column
+        center_array = [int(i) for i in list(board[:, self.COLUMN_COUNT //2])]
+        center_count = center_array.count(piece)
+        score += center_count * 3
+
         # Score horizontal
         # In a specific row, check all column positions
         for r in range(self.ROW_COUNT):
             row_array = [int(i) for i in list(board[r,:])]
             for c in range(self.COLUMN_COUNT-3):
                 window = row_array[c:c+self.WINDOW_LENGTH]
-                if window.count(piece) == 4:
-                    score += 100
-                elif window.count(piece) == 3 and window.count(self.EMPTY) == 1:
-                    score += 10
+                score += self.evaluate_window(window, piece)
+        # Score vertical
+        # In a specific column, check all row positions
         for c in range(self.COLUMN_COUNT):
             col_array = [int(i) for i in list(board[:,c])]
             for r in range(self.ROW_COUNT-3):
                 window = col_array[r:r+self.WINDOW_LENGTH]
-                if window.count(piece) == 4:
-                    score += 100
-                elif window.count(piece) == 3 and window.count(self.EMPTY) == 1:
-                    score += 10
+                score += self.evaluate_window(window, piece)
+        # Score positively sloped diagonals
+        # In a specific (r,c) coordinate, check the (r+i,c+i) positions for i is within the window length
+        for r in range(self.ROW_COUNT -3):
+            for c in range(self.COLUMN_COUNT-3):
+                window = [board[r+i][c+i] for i in range(self.WINDOW_LENGTH)]
+                score += self.evaluate_window(window, piece)
+        # Score negatively sloped diagonals
+        # In a specific (r,c) coordinate, check the (r+3-1,c+i) positions for i is within the window length
+        for r in range(self.ROW_COUNT -3):
+            for c in range(self.COLUMN_COUNT-3):
+                window = [board[r+3-i][c+i] for i in range(self.WINDOW_LENGTH)]
+                score += self.evaluate_window(window, piece)
 
         return score
 
+    # Terminal node if someone has won or if there are no valid locations left
+    def is_terminal_node(self, board):
+        return self.winning_move(board, self.PLAYER_PIECE) or self.winning_move(board, self.AI_PIECE) or len(self.get_valid_locations(board)) == 0
+
+    def minimax(self, board, depth, maximizingPlayer):
+        valid_locations = self.get_valid_locations(board)
+        is_terminal = self.is_terminal_node(board)
+        if depth == 0 or is_terminal:
+            # Check why situation is terminal and return corresponding score
+            # You return (None, score), because you always should return a column and a value within this function
+            # Since we don't know the column that makes the situation terminal, we return None
+            if is_terminal:
+                if self.winning_move(board, self.AI_PIECE):
+                    return (None, 100000000000)
+                elif self.winning_move(board, self.PLAYER_PIECE):
+                    return (None, -100000000000)
+                # There are no more valid moves
+                else:
+                    return (None, 0)
+            # Depth = 0
+            else:
+                return (None, self.score_position(board, self.AI_PIECE))
+
+            # Maximizingplayer's turn, so AI's turn
+        if maximizingPlayer:
+            value = -math.inf
+            # Pick a random column that is valid
+            column = random.choice(valid_locations)
+            for col in valid_locations:
+                row = self.get_next_open_row(board, col)
+                b_copy = board.copy()
+                self.drop_piece(b_copy, row, col, self.AI_PIECE)
+                # Look for max value within the board at a certain depth and switch to min
+                new_score = self.minimax(b_copy, depth-1, False)[1]
+                # If that calculated score is > value, use that column
+                if new_score > value:
+                    value = new_score
+                    column = col
+            return column, value
+
+            # Minimizingplayer's turn, so Player's turn
+        else:
+            value = math.inf
+            # Pick a random column that is valid
+            column = random.choice(valid_locations)
+            for col in valid_locations:
+                row = self.get_next_open_row(board, col)
+                b_copy = board.copy()
+                self.drop_piece(b_copy, row, col, self.PLAYER_PIECE)
+                # Look for min value within the board at a certain depth and switch to min
+                new_score = self.minimax(b_copy, depth-1, True)[1]
+                # If that calculated score is < value, use that column
+                if new_score < value:
+                    value = new_score
+                    column = col
+            return column, value
 
     # Create a list of all columns you can drop a piece in
     def get_valid_locations(self, board):
@@ -183,19 +282,3 @@ class GameControls:
                 # Add valid columns to the list
                 valid_locations.append(col)
         return valid_locations
-
-    def pick_best_move(self, board, piece):
-        valid_locations = self.get_valid_locations(board)
-        best_score = 0
-        best_col = random.choice(valid_locations)
-        for col in valid_locations:
-            row = self.get_next_open_row(board, col)
-            temp_board = board.copy()
-            self.drop_piece(temp_board, row, col, piece)
-            score = self.score_position(temp_board, piece)
-            #If score of lastest column is > best score, set that column to the best column
-            if score > best_score:
-                best_score = score
-                best_col = col
-
-        return best_col

@@ -1,3 +1,5 @@
+# Project by Mats van Braam and Laura Schep
+
 import numpy as np
 import pygame
 
@@ -26,7 +28,7 @@ class PlayingField():
         # Matrix of all 0's with 6 rows, 7 column
         return self.board
 
-    #Print board upside down
+    #Print and draw board upside down
     def print_board(self, board):
         self.draw_board(self.board)
         pygame.display.update()

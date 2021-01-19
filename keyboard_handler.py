@@ -1,3 +1,5 @@
+# Project by Mats van Braam and Laura Schep
+
 class KeyboardHandler:
     """
     Substitute for pygame.key.get_pressed() as this list seems to drop inputs

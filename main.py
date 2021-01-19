@@ -1,3 +1,17 @@
+# Project by Mats van Braam and Laura Schep
+# 19/01/2021
+
+# This program contains a fun connect 4 against a minimax algorithm that is controlled by your voice.
+# When it's your turn, click on the screen once and speak clearly.
+# The console will tell you if it doesn't understand you properly.
+
+# Videos that were used as a basis are by Keith Galli
+
+# We are aware that the program does not fully work.
+# We have a version that does work, however everything is in one class.
+# When creating these classes everything went great, until we implemented the minimax.
+# We do not know how to solve this and hope it can be resolved during the oral exam.
+
 import pygame
 import sys
 
@@ -15,17 +29,11 @@ class Game:
         self.gamecontrols = GameControls(0,0,0)
 
         # size of screen and board
-        self.ROW_COUNT = self.playingfield.ROW_COUNT
-        self.COLUMN_COUNT = self.playingfield.COLUMN_COUNT
-        self.SQUARESIZE = self.playingfield.SQUARESIZE
         self.screen = self.playingfield.screen
         self.board = self.playingfield.board
 
         # keyboard handler
         self.keyboard_handler = KeyboardHandler()
-        # font
-
-        # time
         self.time = pygame.time.get_ticks()
 
     def game_loop(self):
@@ -37,12 +45,10 @@ class Game:
         self.draw_components()
 
     def update_game(self, dt):
-        #Main game game_loop
+        #Execute the gamecontrols
         self.gamecontrols.player_actions()
 
     def draw_components(self):
-        #background draw once
-        #create board
         pass
 
 
