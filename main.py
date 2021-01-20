@@ -16,7 +16,7 @@ import pygame
 import sys
 
 from keyboard_handler import KeyboardHandler
-from playingfield import PlayingField
+#from playingfield import PlayingField
 from gamecontrols import GameControls
 
 class Game:
@@ -25,12 +25,12 @@ class Game:
         pygame.init()
 
         # reference classes
-        self.playingfield = PlayingField()
+        # self.playingfield = PlayingField()
         self.gamecontrols = GameControls(0,0,0)
 
         # size of screen and board
-        self.screen = self.playingfield.screen
-        self.board = self.playingfield.board
+        # self.screen = self.playingfield.screen
+        # self.board = self.playingfield.board
 
         # keyboard handler
         self.keyboard_handler = KeyboardHandler()
@@ -50,7 +50,6 @@ class Game:
 
     def draw_components(self):
         pass
-
 
     def reset(self):
         pass
